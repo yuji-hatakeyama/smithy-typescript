@@ -247,6 +247,50 @@ describe("NodeHttpHandler", () => {
     });
   });
 
+  describe("create", () => {
+    const randomRequestTimeout = Math.round(Math.random() * 10000) + 1;
+
+    it("should return existing handler instance when passed", () => {
+      const existingHandler = new NodeHttpHandler();
+      const result = NodeHttpHandler.create(existingHandler);
+      expect(result).toBe(existingHandler);
+    });
+
+    it.each([
+      ["undefined", undefined],
+      ["empty options hash", {}],
+      ["provider returning void", async () => undefined],
+    ])("should create new handler instance when input is %s", (_, input) => {
+      const result = NodeHttpHandler.create(input);
+      expect(result).toBeInstanceOf(NodeHttpHandler);
+    });
+
+    it.each([
+      ["an options hash", { requestTimeout: randomRequestTimeout }],
+      [
+        "a provider",
+        async () => ({
+          requestTimeout: randomRequestTimeout,
+        }),
+      ],
+    ])("should set requestTimeout correctly when input is %s", async (_, options) => {
+      const result = NodeHttpHandler.create(options);
+      await result.handle({} as any);
+      expect(result.httpHandlerConfigs().requestTimeout).toBe(randomRequestTimeout);
+    });
+
+    it("should handle custom HttpHandler-like objects", () => {
+      const customHandler = {
+        handle: vi.fn(),
+        metadata: { handlerProtocol: "custom" },
+        updateHttpClientConfig: vi.fn(),
+        httpHandlerConfigs: vi.fn(),
+      };
+      const result = NodeHttpHandler.create(customHandler);
+      expect(result).toBe(customHandler);
+    });
+  });
+
   describe("#destroy", () => {
     it("should be callable and return nothing", () => {
       const nodeHttpHandler = new NodeHttpHandler();
